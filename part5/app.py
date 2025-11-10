@@ -13,7 +13,8 @@ BUT:
 from typing import List, Dict, Any
 import json
 import os
-from .constants import BANNER, HELP
+from constants import BANNER, HELP
+
 
 def find_spans(text: str, pattern: str):
     """Return [(start, end), ...] for all (possibly overlapping) matches.
@@ -129,7 +130,10 @@ def load_sonnets() -> List[Dict[str, object]]:
       - Use json.load(fileobj)
     """
     # BEGIN
-    return {}
+    with open(module_relative_path("sonnets.json"), encoding="utf-8") as file:
+        sonnets = json.load(file)
+    return sonnets
+
     # END
 
 CONFIG_DEFAULTS = { "highlight": True, "search_mode": "AND" }
@@ -144,7 +148,15 @@ def load_config() -> Dict[str, object]:
       - If it exists, JSON-decode it and validate keys, falling back to the defaults in CONFIG_DEFAULTS for missing keys.
     """
     # BEGIN
-    return dict(CONFIG_DEFAULTS)
+    if not os.path.isfile(module_relative_path("config.json")):
+        return CONFIG_DEFAULTS
+
+    with open(module_relative_path("config.json"), encoding="utf-8") as file:
+        config = json.load(file)
+        for key in CONFIG_DEFAULTS:
+            if key not in config:
+                config[key] = CONFIG_DEFAULTS[key]
+    return config
     # END
 
 def save_config(cfg: Dict[str, object]) -> None:
@@ -156,12 +168,15 @@ def save_config(cfg: Dict[str, object]) -> None:
       - Use indent=2 and ensure_ascii=False
     """
     # BEGIN
+    with open (module_relative_path("config.json"), "w", encoding="utf-8") as file:
+        json.dump(cfg, file, indent=2, ensure_ascii=False)
     pass
     # END
 
-def main() -> None:
 
+def main() -> None:
     # Load the sonnets from the JSON file
+    global search_mode
     sonnets = load_sonnets()
 
     # Load the configuration from the JSON file
@@ -192,11 +207,22 @@ def main() -> None:
                     config["highlight"] = (parts[1].lower() == "on")
                     print("Highlighting", "ON" if config["highlight"] else "OFF")
                     # ToDo 3: Use save_config(...) to write the config.json file when the highlight setting changes
+                    save_config(config)
                 else:
                     print("Usage: :highlight on|off")
                 continue
+                # ToDo 0 - Copy (and adapt) your implementation of the search mode CLI from part 4 of the exercise
+            if raw.startswith(":search-mode"):
+                parts = raw.split()
+                if len(parts) == 2 and parts[1].lower() in ("and", "or"):
+                    config["search_mode"] = (parts[1].lower() == "and")
+                    print("Search mode set to", "AND" if config["search_mode"] else "OR")
+                    save_config(config)
+                else:
+                    print("Usage: :search-mode AND|OR")
+                continue
 
-            # ToDo 0 - Copy (and adapt) your implementation of the search mode CLI from part 4 of the exercise
+
 
             print("Unknown command. Type :help for commands.")
             continue
@@ -221,13 +247,16 @@ def main() -> None:
                     result = results[i]
 
                     # ToDo 0 - Copy your implementation of the search mode from part 4 of the exercise
-                    if config["search_mode"] == "AND":
+                    if config.get("search_mode", True):
                         if combined_result["matches"] > 0 and result["matches"] > 0:
-                            # Only if we have matches in both results, we consider the sonnet (logical AND!)
                             combined_results[i] = combine_results(combined_result, result)
+
                         else:
-                            # Not in both. No match!
                             combined_result["matches"] = 0
+
+                    elif combined_result["matches"] > 0 or result["matches"] > 0:
+                       combined_results[i] = combine_results(combined_result, result)
+
 
         print_results(raw, combined_results, bool(config["highlight"]))
 
