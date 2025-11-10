@@ -130,10 +130,9 @@ def load_sonnets() -> List[Dict[str, object]]:
       - Use json.load(fileobj)
     """
     # BEGIN
-    with open(module_relative_path("sonnets.json"), encoding="utf-8") as file:
-        sonnets = json.load(file)
+    with open(module_relative_path("sonnets.json"), encoding="utf-8") as file_obj:
+        sonnets = json.load(file_obj)
     return sonnets
-
     # END
 
 CONFIG_DEFAULTS = { "highlight": True, "search_mode": "AND" }
@@ -222,8 +221,6 @@ def main() -> None:
                     print("Usage: :search-mode AND|OR")
                 continue
 
-
-
             print("Unknown command. Type :help for commands.")
             continue
 
@@ -247,7 +244,7 @@ def main() -> None:
                     result = results[i]
 
                     # ToDo 0 - Copy your implementation of the search mode from part 4 of the exercise
-                    if config.get("search_mode", True):
+                    if config["search_mode"]:
                         if combined_result["matches"] > 0 and result["matches"] > 0:
                             combined_results[i] = combine_results(combined_result, result)
 
@@ -255,7 +252,7 @@ def main() -> None:
                             combined_result["matches"] = 0
 
                     elif combined_result["matches"] > 0 or result["matches"] > 0:
-                       combined_results[i] = combine_results(combined_result, result)
+                        combined_results[i] = combine_results(combined_result, result)
 
 
         print_results(raw, combined_results, bool(config["highlight"]))
